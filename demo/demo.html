@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>记账 · 演示</title>
+<style>
+  :root { --fs: 1; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #EEF1F8;
+    font-family: -apple-system, BlinkMacSystemFont, "HarmonyOS Sans SC", "MiSans",
+                 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+
+  /* ---------------- 舞台 ---------------- */
+  .stage { position: absolute; inset: 0; overflow: hidden; }
+  .bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1100px 760px at 72% 4%, #F3F6FF 0%, rgba(243,246,255,0) 62%),
+      radial-gradient(900px 700px at 6% 96%, #E4EBFF 0%, rgba(228,235,255,0) 58%),
+      #EEF1F8;
+  }
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .5; }
+  .blob.b1 { width: 520px; height: 520px; left: -140px; top: -120px; background: #CFDBFF; }
+  .blob.b2 { width: 620px; height: 620px; right: -180px; bottom: -200px; background: #DDE6FF; }
+
+  .headline { position: absolute; opacity: 0; }
+  .logo { font-weight: 800; letter-spacing: -.035em; color: #17191C; }
+  .tagline { color: #6B7280; font-weight: 500; margin-top: 14px; }
+
+  .caption {
+    position: absolute; color: #3F444C; font-weight: 600; opacity: 0;
+    letter-spacing: -.01em;
+  }
+
+  .endcard {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    text-align: center; opacity: 0; z-index: 20;
+  }
+  .endcard .logo { font-size: 84px; }
+  .endcard .tagline { font-size: 26px; margin-top: 16px; }
+
+  .phone-wrap { position: absolute; left: 50%; top: 50%; transform-origin: center; }
+  .phone {
+    position: relative; width: 320px; height: 650px;
+    border: 8px solid #15171A; border-radius: 38px;
+    box-shadow: 0 0 0 2px #2C2F34, 0 30px 70px rgba(15,17,21,.22);
+    overflow: hidden; background: var(--bg); color: var(--text);
+  }
+  .phone[data-theme="light"] {
+    --bg: #F5F6F8; --surface: #FFFFFF; --text: #17191C; --sub: #8B9199;
+    --line: #E8EAED; --warn: #E5484D; --warn-soft: #FDECEC; --chrome: rgba(0,0,0,.34);
+    --accent: #4F6BFF; --accent-strong: #3D57E8; --accent-soft: #EDF0FF;
+  }
+  .phone[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B20; --text: #E6E8EB; --sub: #8B9199;
+    --line: #262A31; --warn: #FF6369; --warn-soft: #3A1F22; --chrome: rgba(255,255,255,.38);
+    --accent: #6B85FF; --accent-strong: #85A0FF; --accent-soft: #1B2340;
+  }
+
+  .screen { position: absolute; inset: 0; overflow: hidden; }
+  .page {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    padding: 38px 16px 12px; background: var(--bg); color: var(--text);
+    will-change: transform;
+  }
+
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; font-size: 11px; font-weight: 600; color: var(--text);
+    z-index: 5; pointer-events: none;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 5px; }
+  .statusbar .icons i { display: block; background: currentColor; border-radius: 2px; }
+  .sb-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 9px; }
+  .sb-bars i { width: 2.5px; border-radius: 1px; }
+  .sb-wifi { width: 11px; height: 8px; clip-path: polygon(0 100%, 100% 0, 100% 22%, 0 100%); }
+  .sb-batt { width: 16px; height: 8px; border: 1.2px solid currentColor; border-radius: 2px; background: transparent !important; position: relative; }
+  .sb-batt::after { content: ''; position: absolute; left: 2px; top: 1.6px; bottom: 1.6px; width: 9px; background: currentColor; border-radius: 1px; }
+
+  /* ---------------- 今日页 ---------------- */
+  .app-head { display: flex; align-items: center; justify-content: space-between; height: 28px; flex: none; }
+  .app-head .date { font-size: 13px; font-weight: 600; }
+  .app-head .date span { color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .head-actions { display: flex; gap: 4px; }
+  .ic { width: 24px; height: 24px; display: grid; place-items: center; color: var(--sub); }
+  .ic svg { display: block; }
+
+  .today-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: 8px; flex: none; }
+  .today-col { min-width: 0; }
+  .today-col.right { text-align: right; }
+  .lbl { font-size: 11px; color: var(--sub); }
+  .big {
+    font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.12;
+    font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap;
+  }
+  .today-col.right .big { font-size: 28px; font-weight: 600; letter-spacing: -.015em; }
+
+  .card {
+    background: var(--surface); border-radius: 12px;
+    padding: 10px 12px 12px; margin-top: 10px; flex: none;
+  }
+  .brow { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; }
+  .brow .lbl-sm { color: var(--sub); }
+  .bval { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+  .bval b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bval em { font-style: normal; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .pill {
+    margin-left: 3px; padding: 1px 6px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; line-height: 1.55;
+    background: var(--accent-soft); color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .pill.over { background: var(--warn-soft); color: var(--warn); }
+  .bar { height: 6px; border-radius: 999px; background: var(--line); margin-top: 9px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+  .bar i.over { background: var(--warn); }
+  .brow.wk { margin-top: 12px; }
+
+  .info { margin-top: 10px; flex: none; }
+  .irow { display: grid; grid-template-columns: max-content max-content 1fr; column-gap: 14px; align-items: baseline; }
+  .irow + .irow { margin-top: 5px; }
+  .irow span { font-size: 11px; color: var(--sub); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .irow b { font-weight: 600; color: var(--text); }
+  .irow b.neg { color: var(--warn); }
+
+  .list { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 8px; }
+  .list-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); padding-bottom: 4px; }
+  .list-head .sum { font-variant-numeric: tabular-nums; }
+  .items { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1px; }
+  .item { display: flex; align-items: center; height: 30px; border-radius: 7px; flex: none; }
+  .item .name { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .amt { font-size: 13px; font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .item .del { width: 20px; height: 20px; display: grid; place-items: center; color: var(--sub); opacity: .5; }
+  .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sub); font-size: 12px; }
+
+  .parse { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 0; }
+  .chip {
+    font-size: 11px; padding: 3px 8px; border-radius: 7px; font-weight: 500;
+    background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+  }
+  .hint { font-size: 10px; color: var(--sub); white-space: nowrap; margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  .inputbar { display: flex; gap: 8px; margin-top: 6px; flex: none; }
+  .field {
+    flex: 1; height: 38px; border-radius: 10px; background: var(--surface);
+    border: 1px solid var(--line); display: flex; align-items: center;
+    padding: 0 11px; font-size: 13px; color: var(--text); overflow: hidden;
+  }
+  .field.typing { border-color: var(--accent); }
+  .field .ph { color: var(--sub); }
+  .caret { width: 1.5px; height: 15px; background: var(--accent); margin-left: 1px; }
+  .submit {
+    height: 38px; padding: 0 14px; border: none; border-radius: 10px;
+    background: var(--accent-strong); color: #fff; font-size: 13px; font-weight: 600;
+    font-family: inherit; flex: none;
+  }
+  .submit.off { background: var(--line); color: var(--sub); }
+
+  /* ---------------- 账单页 ---------------- */
+  .bills-head { display: flex; align-items: center; gap: 8px; height: 30px; flex: none; margin-top: 2px; }
+  .bills-head .back { color: var(--sub); font-size: 18px; width: 22px; }
+  .month-title { flex: 1; text-align: center; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .mode { font-size: 11px; color: var(--sub); background: var(--surface); padding: 3px 8px; border-radius: 7px; }
+  .wd-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 10px; font-size: 10px; color: var(--sub); text-align: center; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 4px; }
+  .cell {
+    height: 44px; border-radius: 8px; background: var(--surface);
+    padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between;
+    font-variant-numeric: tabular-nums; position: relative;
+  }
+  .cell .d { font-size: 10px; color: var(--sub); }
+  .cell .a { font-size: 9px; font-weight: 600; color: var(--sub); text-align: right; }
+  .cell.blank { background: transparent; }
+  .cell.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .cell.sel { box-shadow: inset 0 0 0 1.8px var(--accent); }
+  .cell[data-heat="1"] { background: #D9F0E1; } .cell[data-heat="1"] .d, .cell[data-heat="1"] .a { color: #17663F; }
+  .cell[data-heat="2"] { background: #F7E8BC; } .cell[data-heat="2"] .d, .cell[data-heat="2"] .a { color: #7A5600; }
+  .cell[data-heat="3"] { background: #FAD9BF; } .cell[data-heat="3"] .d, .cell[data-heat="3"] .a { color: #9A4A0F; }
+  .cell[data-heat="4"] { background: #F9CFD0; } .cell[data-heat="4"] .d, .cell[data-heat="4"] .a { color: #9E2222; }
+  .phone[data-theme="dark"] .cell[data-heat="1"] { background: #1B3D2B; } .phone[data-theme="dark"] .cell[data-heat="1"] .d, .phone[data-theme="dark"] .cell[data-heat="1"] .a { color: #7ED9A6; }
+  .phone[data-theme="dark"] .cell[data-heat="2"] { background: #3A3018; } .phone[data-theme="dark"] .cell[data-heat="2"] .d, .phone[data-theme="dark"] .cell[data-heat="2"] .a { color: #E8C766; }
+  .phone[data-theme="dark"] .cell[data-heat="3"] { background: #43261A; } .phone[data-theme="dark"] .cell[data-heat="3"] .d, .phone[data-theme="dark"] .cell[data-heat="3"] .a { color: #F2A06A; }
+  .phone[data-theme="dark"] .cell[data-heat="4"] { background: #442025; } .phone[data-theme="dark"] .cell[data-heat="4"] .d, .phone[data-theme="dark"] .cell[data-heat="4"] .a { color: #F19A9A; }
+
+  .legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 10px; color: var(--sub); flex: none; }
+  .legend i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+  .legend .note { margin-left: auto; }
+
+  .day-detail { flex: 1; min-height: 0; margin-top: 8px; display: flex; flex-direction: column; }
+  .dd-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; color: var(--sub); padding-bottom: 4px; }
+  .dd-head b { font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .dd-items { flex: 1; min-height: 0; }
+  .dd-item { display: flex; height: 28px; align-items: center; font-size: 13px; }
+  .dd-item span:first-child { flex: 1; }
+  .dd-item span:last-child { font-variant-numeric: tabular-nums; }
+  .dd-empty { font-size: 11px; color: var(--sub); padding-top: 6px; }
+  .bill-sum-card { margin-top: 8px; }
+
+  /* ---------------- 设置页 ---------------- */
+  .set-head { display: flex; align-items: center; gap: 6px; height: 34px; flex: none; margin-top: 2px; }
+  .set-head .back { color: var(--sub); font-size: 18px; width: 22px; }
+  .set-head b { font-size: 15px; font-weight: 600; }
+  .set-group { background: var(--surface); border-radius: 12px; margin-top: 10px; overflow: hidden; flex: none; }
+  .set-row { display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 12px 0 14px; font-size: 13px; border-bottom: .6px solid var(--line); }
+  .set-row:last-child { border-bottom: none; }
+  .set-row.sub { padding-left: 28px; font-size: 12px; color: var(--sub); }
+  .set-row .sv { font-size: 13px; color: var(--sub); }
+  .chev { margin-left: 4px; color: var(--sub); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; }
+  .radio.on { border-color: var(--accent); }
+  .radio.on::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .set-note { margin: 14px 4px 0; font-size: 11px; line-height: 1.6; color: var(--sub); flex: none; }
+
+  /* ---------------- 排版 ---------------- */
+  body[data-layout="portrait"] .headline { top: 120px; left: 0; right: 0; text-align: center; }
+  body[data-layout="portrait"] .logo { font-size: 64px; }
+  body[data-layout="portrait"] .tagline { font-size: 24px; }
+  body[data-layout="portrait"] .phone-wrap { top: 53%; }
+  body[data-layout="portrait"] .caption { bottom: 96px; left: 60px; right: 60px; font-size: 30px; line-height: 1.4; }
+
+  body[data-layout="landscape"] .headline { left: 130px; top: 300px; width: 660px; }
+  body[data-layout="landscape"] .logo { font-size: 78px; }
+  body[data-layout="landscape"] .tagline { font-size: 28px; }
+  body[data-layout="landscape"] .phone-wrap { left: 72%; top: 50%; }
+  body[data-layout="landscape"] .caption { left: 130px; top: 610px; bottom: auto; width: 660px; font-size: 40px; line-height: 1.5; }
+</style>
+</head>
+<body data-layout="portrait">
+<div class="stage">
+  <div class="bg"></div>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
+  <div class="headline" id="headline">
+    <div class="logo">记账</div>
+    <div class="tagline">一句话，记完一天</div>
+  </div>
+
+  <div class="phone-wrap" id="phoneWrap">
+    <div class="phone" id="phone" data-theme="light">
+      <div class="screen">
+
+        <!-- ================= 今日 ================= -->
+        <section class="page" id="pToday">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="icons">
+              <span class="sb-bars"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span>
+              <i class="sb-wifi"></i>
+              <i class="sb-batt"></i>
+            </span>
+          </div>
+
+          <div class="app-head">
+            <div class="date">11月18日 <span>周三</span></div>
+            <div class="head-actions">
+              <div class="ic"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 4h9M3 7.5h9M3 11h6"/></svg></div>
+              <div class="ic"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4.5h1.6M6.6 4.5H13M2 10.5h6.6M11.6 10.5H13"/><circle cx="5.1" cy="4.5" r="1.5" fill="currentColor"/><circle cx="10.1" cy="10.5" r="1.5" fill="currentColor"/></svg></div>
+            </div>
+          </div>
+
+          <div class="today-row">
+            <div class="today-col">
+              <div class="lbl">今日已花</div>
+              <div class="big" id="todayBig">¥0.00</div>
+            </div>
+            <div class="today-col right">
+              <div class="lbl">今日剩余</div>
+              <div class="big" id="todayLeft">¥48.62</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="brow">
+              <span class="lbl-sm">本月已花</span>
+              <span class="bval">
+                <b id="mSpent">¥628</b><em id="mBudget">/ ¥1200</em>
+                <span class="pill" id="mPill">余 572</span>
+              </span>
+            </div>
+            <div class="bar"><i id="mBar" style="width:52.3%"></i></div>
+            <div class="brow wk">
+              <span class="lbl-sm">本周已花</span>
+              <span class="bval">
+                <b id="wSpent">¥91</b><em id="wBudget">/ ¥280</em>
+                <span class="pill" id="wPill">余 189</span>
+              </span>
+            </div>
+            <div class="bar"><i id="wBar" style="width:32.5%"></i></div>
+          </div>
+
+          <div class="info">
+            <div class="irow">
+              <span>本月余 <b id="mDays">13</b> 天</span>
+              <span>每日可用 <b id="mDaily">¥48.62</b></span>
+              <span>日均消费 <b id="mAvg">¥34.89</b></span>
+            </div>
+            <div class="irow">
+              <span>本周余 <b id="wDays">4</b> 天</span>
+              <span>每日可用 <b id="wDaily">¥47.25</b></span>
+              <span>日均消费 <b id="wAvg">¥22.75</b></span>
+            </div>
+          </div>
+
+          <div class="list">
+            <div class="list-head"><span>今日</span><span class="sum" id="todaySum">¥0.00</span></div>
+            <div class="items" id="items">
+              <div class="empty" id="empty">今天还没有记录</div>
+            </div>
+          </div>
+
+          <div class="parse" id="parse"></div>
+
+          <div class="inputbar">
+            <div class="field" id="field"><span class="ph" id="ph">炒饭10 奶茶5</span><span id="typed"></span><span class="caret" id="caret" style="display:none"></span></div>
+            <button class="submit off" id="submit">记上</button>
+          </div>
+        </section>
+
+        <!-- ================= 账单 ================= -->
+        <section class="page" id="pBills" style="transform:translateX(100%)">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="icons">
+              <span class="sb-bars"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span>
+              <i class="sb-wifi"></i>
+              <i class="sb-batt"></i>
+            </span>
+          </div>
+          <div class="bills-head">
+            <div class="back">‹</div>
+            <div class="month-title">2026年11月</div>
+            <div class="mode">热力</div>
+          </div>
+          <div class="wd-row"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div class="cal" id="cal"></div>
+          <div class="legend">
+            <span>低</span>
+            <i style="background:#D9F0E1"></i><i style="background:#F7E8BC"></i><i style="background:#FAD9BF"></i><i style="background:#F9CFD0"></i>
+            <span>高</span>
+            <span class="note">按日预算 ¥40</span>
+          </div>
+
+          <div class="day-detail" id="dayDetail">
+            <div class="dd-head"><span id="ddDate">11月18日 周三</span><b id="ddSum">¥0.00</b></div>
+            <div class="dd-items" id="ddItems"><div class="dd-empty">这天还没有记录</div></div>
+          </div>
+
+          <div class="card bill-sum-card">
+            <div class="brow">
+              <span class="lbl-sm">本月已花</span>
+              <span class="bval"><b id="bSpent">¥628</b><em>/ ¥1200</em></span>
+            </div>
+            <div class="bar"><i id="bBar" style="width:52.3%"></i></div>
+          </div>
+        </section>
+
+        <!-- ================= 设置 ================= -->
+        <section class="page" id="pSettings" style="transform:translateX(100%)">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="icons">
+              <span class="sb-bars"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span>
+              <i class="sb-wifi"></i>
+              <i class="sb-batt"></i>
+            </span>
+          </div>
+          <div class="set-head"><div class="back">‹</div><b>设置</b></div>
+
+          <div class="set-group">
+            <div class="set-row"><span>每月预算</span><span class="sv">¥1200<span class="chev">›</span></span></div>
+            <div class="set-row"><span>字体大小</span><span class="sv">标准<span class="chev">›</span></span></div>
+          </div>
+
+          <div class="set-group">
+            <div class="set-row"><span>跟随系统</span><i class="radio"></i></div>
+            <div class="set-row"><span>自动按时间</span><i class="radio on" id="radioAuto"></i></div>
+            <div class="set-row sub"><span>日间时段</span><span class="sv">07:00 — 19:00<span class="chev">›</span></span></div>
+            <div class="set-row"><span>深色</span><i class="radio" id="radioDark"></i></div>
+          </div>
+
+          <div class="set-note">热力按每月预算的 1/30 作为每日基准：绿色低于一半，黄色接近日预算，橙色超出，红色严重超支。</div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="caption" id="caption">记账 · 一句话记完一笔</div>
+
+  <div class="endcard" id="endcard">
+    <div>
+      <div class="logo">记账</div>
+      <div class="tagline">一句话，记完一天</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 时间轴 ================= */
+const T = {
+  enter: 0.0,      // 手机入场
+  headlineOut: 1.9,
+  typeStart: 2.6,
+  typeDur: 1.7,
+  chips: 4.5,
+  press: 5.6,
+  commit: 6.0,
+  zoom: 8.4,
+  zoomEnd: 9.9,
+  bills: 10.1,
+  tapDay: 12.9,
+  settings: 15.4,
+  dark: 16.9,
+  home: 18.7,
+  end: 20.6,
+  endCard: 20.8,
+  dur: 23.0
+};
+window.DURATION = T.dur;
+
+const CAPTIONS = [
+  { t0: 0.0, t1: 2.4, text: '每月 1200 的预算，花得明明白白' },
+  { t0: 2.4, t1: 6.2, text: '输入「炒饭10 奶茶5」，自动拆成两笔' },
+  { t0: 6.2, t1: 10.1, text: '今日、本周、本月，自动汇总' },
+  { t0: 10.1, t1: 15.3, text: '日历一眼看清每天花了多少' },
+  { t0: 15.3, t1: 18.6, text: '预算、字号、深浅色，都在设置里' },
+  { t0: 18.6, t1: 20.7, text: '记账 · 轻，但够用' }
+];
+
+/* ================= 数据 ================= */
+const BUDGET = 1200;
+const MONTH_DAYS = 30;
+const TODAY = 18;
+const WEEKDAY = '周三';
+
+const DAYS = [
+  { d: 1, items: [['食堂', 28], ['超市', 120], ['话费', 30]] },
+  { d: 3, items: [['外卖', 26], ['水果', 18]] },
+  { d: 5, items: [['食堂', 32]] },
+  { d: 6, items: [['奶茶', 12], ['电影', 45]] },
+  { d: 8, items: [['超市', 88]] },
+  { d: 9, items: [['食堂', 28], ['奶茶', 15]] },
+  { d: 11, items: [['外卖', 22], ['打印', 6]] },
+  { d: 12, items: [['食堂', 30]] },
+  { d: 14, items: [['打车', 27], ['零食', 10]] },
+  { d: 15, items: [['超市', 65]] },
+  { d: 16, items: [['食堂', 26]] }
+];
+const NEW_ITEMS = [['炒饭', 10], ['奶茶', 5]];
+const TYPE_TEXT = '炒饭10 奶茶5';
+
+const dayTotal = d => { const x = DAYS.find(v => v.d === d); return x ? x.items.reduce((s, i) => s + i[1], 0) : 0; };
+const monthBefore = DAYS.reduce((s, d) => s + d.items.reduce((a, i) => a + i[1], 0), 0);
+const monthAfter = monthBefore + NEW_ITEMS.reduce((s, i) => s + i[1], 0);
+
+const WEEK_START = 15, WEEK_END = 21;
+const weekBefore = [15, 16].reduce((s, d) => s + dayTotal(d), 0);
+const weekAfter = weekBefore + NEW_ITEMS.reduce((s, i) => s + i[1], 0);
+const dayBudget = BUDGET / MONTH_DAYS;
+const weekBudget = dayBudget * (WEEK_END - WEEK_START + 1);
+
+/* ================= 工具 ================= */
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const ease = p => 1 - Math.pow(1 - p, 3);
+const lerp = (a, b, p) => a + (b - a) * p;
+const money = v => (v < 0 ? '-¥' : '¥') + Math.abs(v).toFixed(2);
+const money0 = v => '¥' + Math.round(v);
+const $ = id => document.getElementById(id);
+
+/* ================= 舞台尺寸 ================= */
+function applyLayout() {
+  const q = new URLSearchParams(location.search);
+  const layout = q.get('layout') === 'landscape' ? 'landscape' : 'portrait';
+  document.body.dataset.layout = layout;
+  const wrap = $('phoneWrap');
+  const scale = layout === 'portrait' ? 2.0 : 1.42;
+  wrap.style.transform = `translate(-50%,-50%) scale(${scale})`;
+  window.PHONE_SCALE = scale;
+}
+
+/* ================= 日历 ================= */
+const HEAT = a => {
+  if (a <= 0) return 0;
+  const p = a / dayBudget;
+  return p <= 0.5 ? 1 : p <= 1 ? 2 : p <= 1.5 ? 3 : 4;
+};
+
+function buildCalendar() {
+  const cal = $('cal');
+  let html = '';
+  // 2026-11-01 为周日，直接放第一列
+  for (let d = 1; d <= MONTH_DAYS; d++) {
+    const a = dayTotal(d) + (d === TODAY && window.__added ? NEW_ITEMS.reduce((s, i) => s + i[1], 0) : 0);
+    const heat = HEAT(a);
+    const cls = `cell${d === TODAY ? ' today' : ''}${d === 1 ? '' : ''}`;
+    html += `<div class="${cls}" data-day="${d}" data-heat="${heat}">
+      <div class="d">${d}</div>
+      <div class="a">${a > 0 ? Math.round(a) : ''}</div>
+    </div>`;
+  }
+  cal.innerHTML = html;
+}
+
+/* ================= 渲染 ================= */
+function setText(id, v) { const el = $(id); if (el && el.textContent !== v) el.textContent = v; }
+
+function render(t) {
+  /* --- 入场与镜头 --- */
+  const enter = ease(seg(t, T.enter, T.enter + 0.7));
+  const headOut = 1 - ease(seg(t, T.headlineOut, T.headlineOut + 0.5));
+  $('headline').style.opacity = document.body.dataset.layout === 'landscape' ? (1 - ease(seg(t, T.endCard, T.endCard + 0.4))) : headOut;
+  $('headline').style.transform = `translateY(${(1 - enter) * 18}px)`;
+
+  const zoom = ease(seg(t, T.zoom, T.zoomEnd)) * (1 - ease(seg(t, T.bills, T.bills + 0.5)));
+  const base = window.PHONE_SCALE || 2.0;
+  const wrap = $('phoneWrap');
+  wrap.style.transform = `translate(-50%,-50%) scale(${base * (0.955 + 0.045 * enter + 0.055 * zoom)})`;
+  const endO = ease(seg(t, T.endCard, T.endCard + 0.7));
+  const wrapOut = 1 - ease(seg(t, T.endCard, T.endCard + 0.45));
+  wrap.style.opacity = ((0.0001 + enter) * wrapOut).toFixed(3);
+  $('endcard').style.opacity = endO.toFixed(3);
+
+  /* --- 字幕 --- */
+  const cap = $('caption');
+  let capText = '';
+  let capOp = 0;
+  for (const c of CAPTIONS) {
+    if (t >= c.t0 - 0.01 && t <= c.t1 + 0.01) {
+      capText = c.text;
+      const fin = ease(seg(t, c.t0, c.t0 + 0.32));
+      const fout = 1 - ease(seg(t, c.t1 - 0.28, c.t1));
+      capOp = Math.min(fin, fout);
+    }
+  }
+  if (cap.textContent !== capText && capText) cap.textContent = capText;
+  cap.style.opacity = capOp.toFixed(3);
+  cap.style.transform = `translateY(${(1 - capOp) * 10}px)`;
+
+  /* --- 页面切换 --- */
+  const billsIn = ease(seg(t, T.bills, T.bills + 0.55));
+  const settingsIn = ease(seg(t, T.settings, T.settings + 0.55));
+  const backHome = ease(seg(t, T.home, T.home + 0.55));
+  $('pBills').style.transform = `translateX(${(1 - billsIn + backHome) * 100}%)`;
+  $('pSettings').style.transform =
+    `translateX(${(1 - settingsIn + backHome) * 100}%)`;
+  // 过渡时只保留正在进入的那一页的状态栏，避免出现两个 9:41
+  document.querySelector('#pToday .statusbar').style.opacity =
+    (billsIn > 0.001 && backHome < 0.999) ? 0 : 1;
+  document.querySelector('#pBills .statusbar').style.opacity =
+    (settingsIn > 0.001 && backHome < 0.999) ? 0 : 1;
+
+  /* --- 主题 --- */
+  const dark = t >= T.dark;
+  $('phone').dataset.theme = dark ? 'dark' : 'light';
+  $('radioDark').classList.toggle('on', dark);
+  $('radioAuto').classList.toggle('on', !dark);
+
+  /* --- 输入 --- */
+  const typeP = seg(t, T.typeStart, T.typeStart + T.typeDur);
+  const n = Math.floor(typeP * TYPE_TEXT.length);
+  const typedText = TYPE_TEXT.slice(0, n);
+  const typing = t >= T.typeStart && t < T.commit;
+  const shown = t >= T.commit ? '' : typedText;
+  $('typed').textContent = shown;
+  $('ph').style.display = shown ? 'none' : '';
+  $('caret').style.display = typing ? '' : 'none';
+  $('caret').style.opacity = typing ? (Math.floor(t * 2.4) % 2 === 0 ? '1' : '0') : '0';
+  $('field').classList.toggle('typing', typing);
+
+  /* --- 解析 chip --- */
+  const commitP = ease(seg(t, T.commit, T.commit + 0.85));
+  const added = t >= T.commit;
+  window.__added = added;
+  const charDone = n >= 2;
+  const chipsOn = t >= T.chips;
+  const parse = $('parse');
+  if (chipsOn && t < T.commit + 0.25) {
+    const parts = [['炒饭', 10], ['奶茶', 5]];
+    let html = '';
+    parts.forEach((p, i) => {
+      const o = ease(seg(t, T.chips + i * 0.12, T.chips + i * 0.12 + 0.28));
+      html += `<span class="chip" style="opacity:${o}">${p[0]} ¥${p[1].toFixed(2)}</span>`;
+    });
+    const hintO = ease(seg(t, T.chips + 0.3, T.chips + 0.6));
+    const dailyAfter = (BUDGET - monthAfter) / (MONTH_DAYS - TODAY + 1);
+    const leftAfter = dailyAfter - NEW_ITEMS.reduce((s, i) => s + i[1], 0);
+    html += `<span class="hint" style="opacity:${hintO}">记上后今日还剩 ${money(leftAfter)}</span>`;
+    if (parse.innerHTML !== html) parse.innerHTML = html;
+    parse.style.opacity = (1 - ease(seg(t, T.commit, T.commit + 0.25))).toFixed(2);
+  } else {
+    parse.innerHTML = '';
+    parse.style.opacity = 0;
+  }
+
+  /* --- 按钮 --- */
+  const ready = charDone && !added;
+  $('submit').classList.toggle('off', !ready);
+  const press = t >= T.press ? (1 - 0.07 * Math.sin(Math.PI * seg(t, T.press, T.press + 0.22))) : 1;
+  $('submit').style.transform = `scale(${press.toFixed(3)})`;
+
+  /* --- 数字 --- */
+  const todayAmt = lerp(0, 15, commitP);
+  const mTotal = lerp(monthBefore, monthAfter, commitP);
+  const wTotal = lerp(weekBefore, weekAfter, commitP);
+  const remain = BUDGET - mTotal;
+  const daysLeft = MONTH_DAYS - TODAY + 1;
+  const daily = remain / daysLeft;
+  const monthAvg = mTotal / TODAY;
+  const wRemain = weekBudget - wTotal;
+  const wDaysLeft = WEEK_END - TODAY + 1;
+  const wDaily = wRemain / wDaysLeft;
+  const wAvg = wTotal / (TODAY - WEEK_START + 1);
+
+  setText('todayBig', money(todayAmt));
+  setText('todayLeft', money(daily - todayAmt));
+  setText('todaySum', money(todayAmt));
+
+  setText('mSpent', money0(mTotal));
+  setText('wSpent', money0(wTotal));
+  setText('mPill', remain < 0 ? '超支 ' + Math.round(-remain) : '余 ' + Math.round(remain));
+  setText('wPill', wRemain < 0 ? '超支 ' + Math.round(-wRemain) : '余 ' + Math.round(wRemain));
+  $('mPill').classList.toggle('over', remain < 0);
+  $('wPill').classList.toggle('over', wRemain < 0);
+  $('mBar').style.width = Math.min(100, mTotal / BUDGET * 100).toFixed(2) + '%';
+  $('wBar').style.width = Math.min(100, wTotal / weekBudget * 100).toFixed(2) + '%';
+  $('mBar').classList.toggle('over', remain < 0);
+  $('wBar').classList.toggle('over', wRemain < 0);
+
+  setText('mDays', String(daysLeft));
+  setText('mDaily', money(daily));
+  setText('mAvg', money(monthAvg));
+  $('mDaily').classList.toggle('neg', daily < 0);
+  setText('wDays', String(wDaysLeft));
+  setText('wDaily', money(wDaily));
+  setText('wAvg', money(wAvg));
+  $('wDaily').classList.toggle('neg', wRemain < 0);
+
+  /* --- 列表 --- */
+  const items = $('items');
+  const empty = $('empty');
+  if (!added) {
+    if (!empty.parentNode) items.appendChild(empty);
+    empty.style.display = '';
+    items.querySelectorAll('.item').forEach(el => el.remove());
+  } else {
+    empty.style.display = 'none';
+    if (!items.querySelector('.item')) {
+      NEW_ITEMS.slice().reverse().forEach((it, i) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `<span class="name">${it[0]}</span><span class="amt">¥${it[1].toFixed(2)}</span><span class="del">✕</span>`;
+        items.appendChild(div);
+      });
+    }
+    items.querySelectorAll('.item').forEach((el, i) => {
+      const k = NEW_ITEMS.length - 1 - i;
+      const o = ease(seg(t, T.commit + k * 0.08, T.commit + k * 0.08 + 0.3));
+      el.style.opacity = o;
+      el.style.transform = `translateY(${(1 - o) * -6}px)`;
+    });
+  }
+
+  /* --- 账单页 --- */
+  const addedToday = added ? NEW_ITEMS.reduce((s, i) => s + i[1], 0) : 0;
+  document.querySelectorAll('.cell[data-day]').forEach(c => {
+    const d = Number(c.dataset.day);
+    const a = dayTotal(d) + (d === TODAY ? addedToday : 0);
+    c.dataset.heat = String(HEAT(a));
+    const el = c.querySelector('.a');
+    const txt = a > 0 ? String(Math.round(a)) : '';
+    if (el.textContent !== txt) el.textContent = txt;
+  });
+
+  setText('bSpent', money0(mTotal));
+  $('bBar').style.width = Math.min(100, mTotal / BUDGET * 100).toFixed(2) + '%';
+  setText('ddDate', t >= T.tapDay ? '11月1日 周日' : `11月${TODAY}日 ${WEEKDAY}`);
+  const selDay = t >= T.tapDay ? 1 : TODAY;
+  const selItems = selDay === 1 ? DAYS[0].items : (added ? NEW_ITEMS : []);
+  const selSum = selItems.reduce((s, i) => s + i[1], 0);
+  setText('ddSum', selDay === 1 ? money(178) : money(todayAmt));
+  const dd = $('ddItems');
+  let ddHtml = '';
+  selItems.slice().forEach((it, i) => {
+    const o = ease(seg(t, (selDay === 1 ? T.tapDay : T.bills) + i * 0.06, (selDay === 1 ? T.tapDay : T.bills) + i * 0.06 + 0.3));
+    ddHtml += `<div class="dd-item" style="opacity:${o}"><span>${it[0]}</span><span>¥${it[1].toFixed(2)}</span></div>`;
+  });
+  if (!selItems.length) ddHtml = `<div class="dd-empty">这天还没有记录</div>`;
+  if (dd.innerHTML !== ddHtml) dd.innerHTML = ddHtml;
+
+  // 选中 cell
+  document.querySelectorAll('.cell').forEach(c => {
+    const d = Number(c.dataset.day);
+    c.classList.toggle('sel', d === selDay && t >= T.tapDay);
+    c.classList.toggle('today', d === TODAY && !(t >= T.tapDay));
+  });
+}
+
+/* ================= 循环 ================= */
+function seek(t) {
+  render(t);
+  window.__t = t;
+}
+window.seek = seek;
+
+applyLayout();
+buildCalendar();
+seek(0);
+</script>
+</body>
+</html>

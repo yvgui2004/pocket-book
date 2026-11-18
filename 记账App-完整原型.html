@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记账 App · 界面设计</title>
+<style>
+  :root { --fs: 1; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #E9EBEF;
+    color: #17191C;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .stage { max-width: 1120px; margin: 0 auto; padding: 48px 24px 72px; }
+
+  .page-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; margin-bottom: 44px;
+  }
+  .page-head h1 {
+    margin: 0 0 8px; font-size: calc(26px * var(--fs, 1)); font-weight: 700; letter-spacing: -0.02em;
+  }
+  .page-head p { margin: 0; font-size: calc(13px * var(--fs, 1)); color: #6B7280; line-height: 1.6; }
+  .demo-btn {
+    flex: none; height: 42px; padding: 0 20px; border: none; border-radius: 11px;
+    background: #17191C; color: #fff; font-size: calc(13px * var(--fs, 1)); font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: background .2s, transform .15s;
+  }
+  .demo-btn:hover { background: #2A2D31; }
+  .demo-btn:active { transform: scale(.97); }
+  .demo-btn:disabled { opacity: .45; cursor: default; }
+  .demo-btn.ghost { background: transparent; color: #3F444C; border: 1px solid #D7DAE0; }
+  .demo-btn.ghost:hover { background: #F0F1F4; }
+  .head-buttons { display: flex; gap: 10px; flex: none; }
+
+  .theme-group { margin-bottom: 44px; }
+  .group-label {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    font-size: calc(12px * var(--fs, 1)); font-weight: 600; letter-spacing: .08em; color: #6B7280;
+  }
+  .group-label::after { content: ""; flex: 1; height: 1px; background: #D7DAE0; }
+
+  .row { display: flex; gap: 26px; flex-wrap: wrap; }
+  .cell { width: 320px; }
+  .cell-label {
+    margin-bottom: 10px; padding-left: 4px;
+    font-size: calc(12px * var(--fs, 1)); font-weight: 600; color: #3F444C;
+  }
+  .cell-label em {
+    font-style: normal; font-weight: 400; color: #8B9199; font-size: calc(11px * var(--fs, 1));
+    margin-left: 6px;
+  }
+
+  /* ---------- 手机框 ---------- */
+  .phone {
+    position: relative;
+    width: 320px; height: 650px;
+    border: 8px solid #15171A;
+    border-radius: 38px;
+    box-shadow: 0 0 0 2px #2C2F34, 0 20px 50px rgba(15, 17, 21, .20);
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .phone[data-theme="light"] {
+    --bg: #F5F6F8; --surface: #FFFFFF; --text: #17191C; --sub: #8B9199;
+    --line: #E8EAED; --warn: #E5484D; --warn-soft: #FDECEC; --chrome: rgba(0,0,0,.34);
+    --accent: #4F6BFF; --accent-strong: #3D57E8; --accent-soft: #EDF0FF;
+    --btn-bg: var(--accent-strong); --btn-text: #FFFFFF;
+  }
+  .phone[data-theme="dark"] {
+    --bg: #0F1115; --surface: #181B20; --text: #E6E8EB; --sub: #8B9199;
+    --line: #262A31; --warn: #FF6369; --warn-soft: #3A1F22; --chrome: rgba(255,255,255,.38);
+    --accent: #6B85FF; --accent-strong: #85A0FF; --accent-soft: #1B2340;
+    --btn-bg: var(--accent); --btn-text: #0B0D10;
+  }
+
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 30px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; font-size: calc(11px * var(--fs, 1)); font-weight: 600; color: var(--text);
+    z-index: 5; pointer-events: none;
+  }
+  .statusbar .icons { display: flex; align-items: center; gap: 5px; }
+  .statusbar svg { display: block; }
+  .punch {
+    position: absolute; top: 8px; left: 50%; width: 11px; height: 11px;
+    transform: translateX(-50%); background: #000; border-radius: 50%; z-index: 6;
+  }
+  .phone[data-theme="dark"] .punch { box-shadow: 0 0 0 1px rgba(255,255,255,.12); }
+
+  .screen {
+    position: absolute; top: 30px; left: 0; right: 0; bottom: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 10px 16px 8px; overflow: hidden;
+  }
+
+  .navbar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 18px;
+    display: grid; place-items: center; z-index: 4;
+  }
+  .navbar i { width: 84px; height: 4px; border-radius: 999px; background: var(--chrome); }
+
+  /* ---------- 通用 ---------- */
+  .label-sm { font-size: calc(11px * var(--fs, 1)); color: var(--sub); }
+  .muted { color: var(--sub); }
+  .small { font-size: calc(11px * var(--fs, 1)); }
+  .small b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .big-money {
+    margin-top: 1px; font-size: calc(30px * var(--fs, 1)); font-weight: 700;
+    letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1.15;
+    white-space: nowrap; transition: color .25s ease;
+  }
+  .big-money.over-1 { color: #C2740B; }
+  .big-money.over-2 { color: var(--warn); }
+  .phone[data-theme="dark"] .big-money.over-1 { color: #F0A64A; }
+  .amount.negative { color: var(--warn); }
+  .bar i.over { background: var(--warn); }
+
+  .today-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+  .today-col { min-width: 0; }
+  .today-col .big-money { overflow: hidden; text-overflow: ellipsis; }
+  .today-col.right { text-align: right; }
+  .today-col.right .big-money.negative { color: var(--warn); }
+  .card { background: var(--surface); border-radius: 12px; padding: 11px 12px 12px; }
+  .bar { margin-top: 9px; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .bar i {
+    display: block; height: 100%; width: 0; border-radius: 999px;
+    background: var(--accent); transition: width .45s cubic-bezier(.2,.7,.3,1);
+  }
+
+  /* ---------- 今日页 ---------- */
+  .app-head { display: flex; align-items: center; justify-content: space-between; height: 28px; }
+  .app-head .date { font-size: calc(13px * var(--fs, 1)); font-weight: 600; letter-spacing: -0.01em; }
+  .app-head .date span { color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .head-actions { display: flex; gap: 2px; }
+  .icon-btn {
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border: none; background: transparent; color: var(--sub); cursor: pointer;
+    border-radius: 7px; padding: 0; transition: background .18s, color .18s;
+  }
+  .icon-btn:hover { background: var(--surface); color: var(--text); }
+  .icon-btn svg { display: block; }
+
+  .budget-row { display: flex; align-items: baseline; justify-content: space-between; font-size: calc(12px * var(--fs, 1)); }
+  .budget-row .val { display: flex; align-items: baseline; gap: 4px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .budget-row .val b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .budget-row em { font-style: normal; font-weight: 400; color: var(--sub); }
+  .left-pill {
+    font-size: calc(10px * var(--fs, 1)); font-weight: 600; line-height: 1.55;
+    padding: 1px 6px; border-radius: 999px; margin-left: 3px;
+    background: var(--accent-soft); color: var(--accent);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .left-pill.over { background: var(--warn-soft); color: var(--warn); }
+  .week-row { margin-top: 12px; }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    column-gap: 14px; row-gap: 5px;
+    align-items: baseline;
+    font-size: calc(11px * var(--fs, 1)); color: var(--sub);
+    font-variant-numeric: tabular-nums;
+  }
+  .info-row { display: contents; }
+  .info-grid span { white-space: nowrap; }
+  .info-grid b { font-weight: 600; color: var(--text); }
+  .info-grid b.negative { color: var(--warn); }
+
+  /* 大字号时每条各自成行、自动换行，避免溢出和串行 */
+  html.fs-lg .info-grid { display: block; }
+  html.fs-lg .info-row { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+  html.fs-lg .info-row + .info-row { margin-top: 4px; }
+
+  .list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .list-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 5px; font-size: calc(11px * var(--fs, 1)); color: var(--sub);
+  }
+  .list-head .sum { font-variant-numeric: tabular-nums; }
+  .items {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .items::-webkit-scrollbar { display: none; }
+  .item { display: flex; align-items: center; height: 30px; flex: none; border-radius: 7px; }
+  .item .name { flex: 1; font-size: calc(13px * var(--fs, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .amt { font-size: calc(13px * var(--fs, 1)); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .item .del {
+    width: 22px; height: 22px; display: grid; place-items: center;
+    border: none; background: transparent; color: var(--sub);
+    border-radius: 6px; cursor: pointer; padding: 0; opacity: .55;
+    transition: opacity .18s, color .18s, background .18s;
+  }
+  .item .del:hover { opacity: 1; color: var(--warn); background: var(--surface); }
+  .item .del svg { display: block; }
+
+  /* 左滑删除 */
+  .swipe-row { position: relative; height: 30px; flex: none; border-radius: 7px; overflow: hidden; }
+  .swipe-row.removing { transition: height .2s ease, opacity .2s ease; }
+  .swipe-action {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 64px;
+    border: none; background: var(--warn); color: #fff;
+    font-size: calc(12px * var(--fs, 1)); font-weight: 600; font-family: inherit;
+    cursor: pointer; display: grid; place-items: center;
+    opacity: 0; transition: opacity .15s ease;
+  }
+  .swipe-row.open .swipe-action { opacity: 1; }
+  .swipe-item {
+    position: relative; z-index: 1; background: var(--bg);
+    width: 100%; border-radius: 0;
+    transition: transform .22s cubic-bezier(.2,.7,.3,1);
+    touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  }
+  .swipe-item.dragging { transition: none; }
+
+  .toast {
+    position: absolute; left: 50%; bottom: 52px;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(20,22,26,.92); color: #fff;
+    font-size: calc(11px * var(--fs, 1)); padding: 6px 12px; border-radius: 8px;
+    opacity: 0; pointer-events: none; z-index: 30; white-space: nowrap;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .item.new { animation: itemIn .28s cubic-bezier(.2,.7,.3,1); }
+  .swipe-row.new { animation: itemIn .28s cubic-bezier(.2,.7,.3,1); }
+  .item.removing { animation: itemOut .22s cubic-bezier(.4,0,1,1) forwards; overflow: hidden; }
+  @keyframes itemIn { from { opacity: 0; transform: translateY(-7px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes itemOut { from { opacity: 1; height: 30px; } to { opacity: 0; height: 0; transform: translateX(8px); } }
+
+  .empty-today { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--sub); font-size: calc(12px * var(--fs, 1)); }
+  .empty-today .small { margin-top: 5px; font-size: calc(11px * var(--fs, 1)); }
+
+  .parse-preview {
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    max-height: 0; overflow: hidden; transition: max-height .22s ease, margin .22s ease;
+  }
+  .parse-preview.on { max-height: 92px; margin-bottom: 2px; }
+  .parse-chip {
+    font-size: calc(11px * var(--fs, 1)); padding: 3px 8px; border-radius: 7px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 500;
+    white-space: nowrap;
+  }
+  .parse-chip.bad { background: var(--warn-soft); color: var(--warn); }
+  .parse-hint { font-size: calc(10px * var(--fs, 1)); color: var(--sub); margin-left: auto; white-space: nowrap; }
+  .parse-hint.bad { color: var(--warn); }
+
+  .inputbar { display: flex; gap: 8px; margin-top: auto; flex: none; }
+  .inputbar input {
+    flex: 1; min-width: 0; height: 36px; padding: 0 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+    color: var(--text); font-family: inherit; font-size: calc(13px * var(--fs, 1)); outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .inputbar input::placeholder { color: var(--sub); }
+  .inputbar input.focus-demo { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .inputbar button {
+    flex: none; height: 36px; padding: 0 14px; border: none; border-radius: 10px;
+    background: var(--btn-bg); color: var(--btn-text); font-family: inherit;
+    font-size: calc(13px * var(--fs, 1)); font-weight: 600; cursor: pointer; transition: transform .15s, filter .18s;
+  }
+  .inputbar button:hover { filter: brightness(1.06); }
+  .inputbar button:active { transform: scale(.96); }
+
+  /* ---------- 账单页 ---------- */
+  .bills-head { display: flex; align-items: center; justify-content: space-between; height: 28px; }
+  .bills-head-spacer { width: 24px; }
+  .back-btn {
+    width: 24px; height: 24px; display: grid; place-items: center;
+    border: none; background: transparent; color: var(--sub); cursor: pointer;
+    border-radius: 6px; padding: 0; font-size: calc(15px * var(--fs, 1)); line-height: 1;
+  }
+  .back-btn:hover { background: var(--surface); color: var(--text); }
+  .month-switch { display: flex; align-items: center; gap: 10px; }
+  .month-switch button {
+    width: 22px; height: 22px; display: grid; place-items: center;
+    border: none; background: transparent; color: var(--sub); cursor: pointer;
+    border-radius: 6px; padding: 0; font-size: calc(14px * var(--fs, 1)); line-height: 1;
+  }
+  .month-switch button:hover { background: var(--surface); color: var(--text); }
+  .month-title { font-size: calc(13px * var(--fs, 1)); font-weight: 600; letter-spacing: -0.01em; min-width: 78px; text-align: center; }
+
+  /* 月历：热力底色 + 对角信息（日期左上、金额右下） */
+  .calendar { flex: none; display: flex; flex-direction: column; gap: 5px; }
+  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-week span { text-align: center; font-size: calc(10px * var(--fs, 1)); color: var(--sub); padding-bottom: 2px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-cell {
+    position: relative;
+    height: 44px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--line);
+    color: var(--text); padding: 0; font-family: inherit; cursor: pointer;
+    transition: background .16s, border-color .16s, box-shadow .16s;
+  }
+  .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+  .cal-cell:not(.empty):hover { border-color: var(--sub); }
+  .cal-num {
+    position: absolute; top: 5px; left: 6px;
+    font-size: calc(10px * var(--fs, 1)); font-weight: 500; line-height: 1; color: var(--sub);
+  }
+  .cal-amt {
+    position: absolute; bottom: 5px; right: 6px;
+    font-size: calc(9px * var(--fs, 1)); font-weight: 600; line-height: 1;
+    color: var(--sub); font-variant-numeric: tabular-nums;
+  }
+  .cal-cell.has .cal-amt { color: var(--text); }
+  .cal-cell.today .cal-num { font-weight: 700; color: var(--accent); }
+  .cal-cell.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .cal-cell.sel .cal-num { color: var(--accent); }
+
+  /* 热力档位：底色 + 同色系描边 + 同色文字 */
+  .cal-cell.heat-1 { background: #D9F0E1; border-color: #B9E1C9; }
+  .cal-cell.heat-2 { background: #F7E8BC; border-color: #E8D398; }
+  .cal-cell.heat-3 { background: #FAD9BF; border-color: #EFC29E; }
+  .cal-cell.heat-4 { background: #F9CFD0; border-color: #ECB1B3; }
+  .cal-cell.heat-1 .cal-num, .cal-cell.heat-1 .cal-amt { color: #17663F; }
+  .cal-cell.heat-2 .cal-num, .cal-cell.heat-2 .cal-amt { color: #7A5600; }
+  .cal-cell.heat-3 .cal-num, .cal-cell.heat-3 .cal-amt { color: #9A4A0F; }
+  .cal-cell.heat-4 .cal-num, .cal-cell.heat-4 .cal-amt { color: #9E2222; }
+  .phone[data-theme="dark"] .cal-cell.heat-1 { background: #1B3D2B; border-color: #2A5A3E; }
+  .phone[data-theme="dark"] .cal-cell.heat-2 { background: #3A3018; border-color: #55461F; }
+  .phone[data-theme="dark"] .cal-cell.heat-3 { background: #43261A; border-color: #5F3722; }
+  .phone[data-theme="dark"] .cal-cell.heat-4 { background: #442025; border-color: #6A2E34; }
+  .phone[data-theme="dark"] .cal-cell.heat-1 .cal-num, .phone[data-theme="dark"] .cal-cell.heat-1 .cal-amt { color: #7ED9A6; }
+  .phone[data-theme="dark"] .cal-cell.heat-2 .cal-num, .phone[data-theme="dark"] .cal-cell.heat-2 .cal-amt { color: #E8C766; }
+  .phone[data-theme="dark"] .cal-cell.heat-3 .cal-num, .phone[data-theme="dark"] .cal-cell.heat-3 .cal-amt { color: #F2A06A; }
+  .phone[data-theme="dark"] .cal-cell.heat-4 .cal-num, .phone[data-theme="dark"] .cal-cell.heat-4 .cal-amt { color: #F19A9A; }
+
+  /* 热力图例 */
+  .heat-legend {
+    flex: none; display: flex; align-items: center; gap: 4px;
+    height: 14px; font-size: calc(10px * var(--fs, 1)); color: var(--sub);
+  }
+  .heat-legend i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+  .heat-legend i.heat-1 { background: #D9F0E1; }
+  .heat-legend i.heat-2 { background: #F7E8BC; }
+  .heat-legend i.heat-3 { background: #FAD9BF; }
+  .heat-legend i.heat-4 { background: #F9CFD0; }
+  .phone[data-theme="dark"] .heat-legend i.heat-1 { background: #1B3D2B; }
+  .phone[data-theme="dark"] .heat-legend i.heat-2 { background: #3A3018; }
+  .phone[data-theme="dark"] .heat-legend i.heat-3 { background: #43261A; }
+  .phone[data-theme="dark"] .heat-legend i.heat-4 { background: #442025; }
+  .heat-legend .note { margin-left: auto; }
+
+  /* 选中日明细 */
+  .day-detail {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+  }
+  .day-detail-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 5px; font-size: calc(11px * var(--fs, 1)); color: var(--sub);
+  }
+  .day-detail-head b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .day-items {
+    display: flex; flex-direction: column; gap: 1px;
+    flex: 1; min-height: 0; overflow-y: auto;
+  }
+  .day-items::-webkit-scrollbar { display: none; }
+  .empty-day { padding: 22px 0; text-align: center; font-size: calc(12px * var(--fs, 1)); color: var(--sub); }
+
+  /* 底部统计 */
+  .bills-summary { flex: none; }
+  .summary-foot {
+    display: flex; justify-content: space-between;
+    margin-top: 7px; font-size: calc(11px * var(--fs, 1)); color: var(--sub);
+  }
+  .summary-foot b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .add-entry-btn {
+    align-self: flex-end;
+    margin-top: 6px;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: calc(12px * var(--fs, 1));
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px 2px;
+  }
+  .add-entry-btn:hover { text-decoration: underline; }
+  .add-preview {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px;
+  }
+  .add-preview:empty { display: none; }
+  .btn-primary:disabled { opacity: .45; cursor: default; }
+
+  /* ---------- 设置页 ---------- */
+  .settings-head { display: flex; align-items: center; gap: 6px; height: 28px; }
+  .settings-title { font-size: calc(15px * var(--fs, 1)); font-weight: 600; letter-spacing: -0.01em; }
+  .set-group { background: var(--surface); border-radius: 12px; overflow: hidden; }
+  .set-row {
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 44px; padding: 0 12px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .set-row:last-child { border-bottom: none; }
+  .set-row:hover { background: rgba(127,127,127,.045); }
+  .set-row.sub { padding-left: 28px; }
+  .set-row.sub .set-label { font-size: calc(12px * var(--fs, 1)); color: var(--sub); }
+  .set-label { font-size: calc(13px * var(--fs, 1)); }
+  .set-value { font-size: calc(13px * var(--fs, 1)); color: var(--sub); display: flex; align-items: center; gap: 6px; }
+  .chev { color: var(--sub); font-size: calc(12px * var(--fs, 1)); }
+  .radio {
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 1.5px solid var(--line); position: relative; flex: none;
+    transition: border-color .18s;
+  }
+  .radio.on { border-color: var(--accent); }
+  .radio.on::after {
+    content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent);
+    animation: dotIn .2s cubic-bezier(.2,.7,.3,1);
+  }
+  @keyframes dotIn { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+  .set-note { font-size: calc(11px * var(--fs, 1)); color: var(--sub); line-height: 1.6; padding: 2px 4px 0; }
+
+  /* ---------- 预算弹窗 ---------- */
+  .modal-mask {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(0,0,0,.38); display: flex; align-items: flex-end;
+    animation: fadeIn .18s ease;
+  }
+  .sheet {
+    width: 100%; background: var(--surface); border-radius: 16px 16px 0 0;
+    padding: 18px 16px 20px; animation: sheetUp .26s cubic-bezier(.2,.7,.3,1);
+  }
+  .sheet h3 { margin: 0 0 12px; font-size: calc(14px * var(--fs, 1)); font-weight: 600; }
+  .sheet input {
+    width: 100%; height: 42px; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0 12px; font-size: calc(16px * var(--fs, 1)); background: var(--bg); color: var(--text);
+    font-family: inherit; outline: none; font-variant-numeric: tabular-nums;
+  }
+  .sheet input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .sheet-actions button {
+    flex: 1; height: 38px; border-radius: 10px; border: none;
+    font-size: calc(13px * var(--fs, 1)); font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-ghost { background: var(--bg); color: var(--text); }
+  .btn-primary { background: var(--btn-bg); color: var(--btn-text); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+
+  .footnote { margin-top: 8px; font-size: calc(12px * var(--fs, 1)); color: #8B9199; line-height: 1.7; }
+
+  @media (max-width: 1020px) { .row { justify-content: center; } }
+  @media (max-width: 720px) {
+    .page-head { flex-direction: column; align-items: flex-start; }
+    .stage { padding: 32px 16px 56px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <header class="page-head">
+    <div>
+      <h1>记账 App · 界面设计</h1>
+      <p>靛蓝主色 · 浅色 / 深色 × 今日 / 账单 / 设置。输入框可直接打字试解析，条目左滑删除。</p>
+    </div>
+    <div class="head-buttons">
+      <button class="demo-btn ghost" id="overBtn">⚠ 演示超支</button>
+      <button class="demo-btn" id="demoBtn">＋ 演示记一笔</button>
+    </div>
+  </header>
+
+  <section class="theme-group">
+    <div class="group-label">浅色模式</div>
+    <div class="row" id="lightRow"></div>
+  </section>
+
+  <section class="theme-group">
+    <div class="group-label">深色模式</div>
+    <div class="row" id="darkRow"></div>
+  </section>
+
+  <p class="footnote">演示数据：本月已花 ¥315，预算 ¥1200。今日页输入框可以直接输入「炒饭10 奶茶abc」看解析失败；条目左滑露出删除，点 × 只会提示。逻辑：日预算 = 月预算 ÷ 30；本周从每月 1 号起每 7 天一段，月底不足 7 天也算一段，周额度 = 日预算 × 本周天数；每日可用 = 剩余 ÷ 剩余天数（含今天）；日均消费 = 已花 ÷ 已过天数。</p>
+</div>
+
+<script>
+  /* ---------------- 数据 ---------------- */
+  const app = {
+    budget: 1200,
+    monthOrder: ['2026-10', '2026-11', '2026-12'],
+    monthIndex: 1,
+    selected: {},
+    themeMode: 'auto',
+    fontScale: 1.0,
+    months: {
+      '2026-10': {
+        label: '2026年10月',
+        days: [
+          { date: '10月28日', weekday: '周二', items: [
+            { id: 11, name: '食堂', amount: 28 }, { id: 12, name: '奶茶', amount: 12 }
+          ]},
+          { date: '10月25日', weekday: '周六', items: [
+            { id: 13, name: '电影', amount: 45 }, { id: 14, name: '打车', amount: 23 }
+          ]},
+          { date: '10月20日', weekday: '周一', items: [
+            { id: 15, name: '超市', amount: 156 }, { id: 16, name: '话费', amount: 30 }
+          ]},
+          { date: '10月15日', weekday: '周三', items: [
+            { id: 17, name: '外套', amount: 399 }
+          ]},
+          { date: '10月8日', weekday: '周三', items: [
+            { id: 18, name: '外卖', amount: 26 }, { id: 19, name: '水果', amount: 18 }
+          ]}
+        ]
+      },
+      '2026-11': {
+        label: '2026年11月',
+        days: [
+          { date: '11月2日', weekday: '周一', items: [
+            { id: 1, name: '炒饭', amount: 10 }, { id: 2, name: '奶茶', amount: 5 }
+          ]},
+          { date: '11月1日', weekday: '周日', items: [
+            { id: 3, name: '超市', amount: 268 }, { id: 4, name: '纸巾', amount: 2 }, { id: 5, name: '话费', amount: 30 }
+          ]}
+        ]
+      },
+      '2026-12': { label: '2026年12月', days: [] }
+    }
+  };
+
+  let uid = 20;
+  let busy = false;
+
+  /* ---------------- 图标 ---------------- */
+  const svgX = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>';
+  const svgList = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4.5 3.5h8M4.5 7.5h8M4.5 11.5h8"/><circle cx="2" cy="3.5" r=".9" fill="currentColor" stroke="none"/><circle cx="2" cy="7.5" r=".9" fill="currentColor" stroke="none"/><circle cx="2" cy="11.5" r=".9" fill="currentColor" stroke="none"/></svg>';
+  const svgGear = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4.5h1.6M6.6 4.5H13M2 10.5h6.6M11.6 10.5H13"/><circle cx="5.1" cy="4.5" r="1.5" fill="currentColor"/><circle cx="10.1" cy="10.5" r="1.5" fill="currentColor"/></svg>';
+  const svgStatus = `
+    <svg width="12" height="9" viewBox="0 0 14 10" fill="currentColor">
+      <rect x="0" y="6" width="2" height="4" rx=".5"/><rect x="4" y="4" width="2" height="6" rx=".5"/>
+      <rect x="8" y="2" width="2" height="8" rx=".5"/><rect x="12" y="0" width="2" height="10" rx=".5"/>
+    </svg>
+    <svg width="12" height="9" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+      <path d="M3 6a5 5 0 018 0"/><path d="M.8 3.4a10.5 10.5 0 0112.4 0" opacity=".55"/>
+      <circle cx="7" cy="8.4" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+    <svg width="18" height="9" viewBox="0 0 22 10" fill="none">
+      <rect x=".6" y=".6" width="18.8" height="8.8" rx="2" stroke="currentColor" stroke-width="1.2" opacity=".65"/>
+      <rect x="2" y="2" width="13" height="6" rx="1" fill="currentColor"/>
+      <rect x="20" y="3.4" width="1.6" height="3.2" rx=".8" fill="currentColor" opacity=".65"/>
+    </svg>`;
+
+  /* ---------------- 工具 ---------------- */
+  const money = v => (v < 0 ? '-¥' : '¥') + Math.abs(v).toFixed(2);
+  const money0 = v => '¥' + Math.round(v);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const monthData = () => app.months[app.monthOrder[app.monthIndex]];
+  const sum = arr => arr.reduce((s, i) => s + i.amount, 0);
+  const monthTotal = key => sum(monthDataOf(key).days.flatMap(d => d.items));
+  function monthDataOf(key) { return app.months[key]; }
+
+  const TODAY_KEY = '2026-11';
+  const todayDay = () => app.months[TODAY_KEY].days.find(d => d.date === '11月2日');
+  const todayTotal = () => sum(todayDay().items);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // 汇总本月某几天（按日期数字）的消费
+  function sumDaysBetween(a, b) {
+    return app.months[TODAY_KEY].days
+      .filter(d => {
+        const n = parseDayNum(d.date);
+        return n >= a && n <= b;
+      })
+      .reduce((s, d) => s + sum(d.items), 0);
+  }
+
+  function parseInput(text) {
+    const tokens = text.trim().split(/[\s,，、;；\n]+/).filter(Boolean);
+    const out = [];
+    const push = (name, amount) => out.push({ name, amount, ok: Number.isFinite(amount) && amount > 0 });
+
+    for (let i = 0; i < tokens.length; i++) {
+      const tok = tokens[i];
+      if (!/\d/.test(tok)) {
+        if (i + 1 < tokens.length && /^\d+(?:\.\d+)?$/.test(tokens[i + 1])) {
+          push(tok, parseFloat(tokens[i + 1]));
+          i++;
+        } else {
+          out.push({ name: tok, amount: 0, ok: false });
+        }
+        continue;
+      }
+      let m = tok.match(/^(.*?)(\d+(?:\.\d+)?)$/);
+      if (m && m[1]) { push(m[1], parseFloat(m[2])); continue; }
+      m = tok.match(/^(\d+(?:\.\d+)?)([^\d]+)$/);
+      if (m) { push(m[2], parseFloat(m[1])); continue; }
+      m = tok.match(/^(\d+(?:\.\d+)?)$/);
+      if (m) { push('未命名', parseFloat(m[1])); continue; }
+      out.push({ name: tok, amount: 0, ok: false });
+    }
+    return out;
+  }
+
+  function setMoney(el, v, animate) {
+    if (!el) return;
+    if (!animate) { el.textContent = money(v); el.dataset.value = v; return; }
+    const from = parseFloat(el.dataset.value ?? v) || 0;
+    el.dataset.value = v;
+    const t0 = performance.now(), dur = 320;
+    const tick = t => {
+      const p = Math.min(1, Math.max(0, (t - t0) / dur));
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = money(from + (v - from) * e);
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = money(v);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------------- 模板 ---------------- */
+  function statusbarHTML() {
+    return `<div class="statusbar"><span>9:41</span><div class="icons">${svgStatus}</div></div><div class="punch"></div>`;
+  }
+
+  function todayHTML() {
+    return `
+      <header class="app-head">
+        <div class="date">11月2日<span>周一</span></div>
+        <div class="head-actions">
+          <button class="icon-btn" data-go="bills" aria-label="账单">${svgList}</button>
+          <button class="icon-btn" data-go="settings" aria-label="设置">${svgGear}</button>
+        </div>
+      </header>
+
+      <section class="today-row">
+        <div class="today-col">
+          <div class="label-sm">今日已花</div>
+          <div class="big-money js-today" data-value="0">¥0.00</div>
+        </div>
+        <div class="today-col right">
+          <div class="label-sm">今日剩余</div>
+          <div class="big-money js-today-left" data-value="0">¥0.00</div>
+        </div>
+      </section>
+
+      <section class="card budget">
+        <div class="budget-row">
+          <span class="muted">本月已花</span>
+          <span class="val">
+            <b class="js-month">¥0</b><em class="js-budget">/ ¥0</em>
+            <span class="left-pill js-month-left">余 0</span>
+          </span>
+        </div>
+        <div class="bar"><i class="js-bar"></i></div>
+
+        <div class="budget-row week-row">
+          <span class="muted">本周已花</span>
+          <span class="val">
+            <b class="js-week-spent">¥0</b><em class="js-week-budget">/ ¥0</em>
+            <span class="left-pill js-week-left">余 0</span>
+          </span>
+        </div>
+        <div class="bar"><i class="js-week-bar"></i></div>
+      </section>
+
+      <section class="remaining">
+        <div class="info-grid">
+          <div class="info-row">
+            <span>本月余 <b class="js-month-days">29</b> 天</span>
+            <span>每日可用 <b class="js-daily" data-value="0">¥0.00</b></span>
+            <span>日均消费 <b class="js-month-avg" data-value="0">¥0.00</b></span>
+          </div>
+          <div class="info-row">
+            <span>本周余 <b class="js-week-days">6</b> 天</span>
+            <span>每日可用 <b class="js-week-daily" data-value="0">¥0.00</b></span>
+            <span>日均消费 <b class="js-week-avg" data-value="0">¥0.00</b></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="list">
+        <div class="list-head"><span>今日</span><span class="sum js-today-sum" data-value="0">¥0.00</span></div>
+        <div class="items js-items"></div>
+      </section>
+
+      <div class="parse-preview js-parse"></div>
+      <div class="inputbar">
+        <input class="js-input" type="text" placeholder="炒饭10 奶茶5" autocomplete="off" spellcheck="false">
+        <button class="js-submit">记上</button>
+      </div>`;
+  }
+
+  function billsHTML() {
+    return `
+      <header class="bills-head">
+        <button class="back-btn" data-go="today" aria-label="返回">‹</button>
+        <div class="month-switch">
+          <button class="js-prev" aria-label="上个月">‹</button>
+          <span class="month-title js-month-title">—</span>
+          <button class="js-next" aria-label="下个月">›</button>
+        </div>
+        <span class="bills-head-spacer" aria-hidden="true"></span>
+      </header>
+
+      <div class="calendar js-calendar"></div>
+      <div class="heat-legend js-legend">
+        <span>低</span>
+        <i class="heat-1"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-4"></i>
+        <span>高</span>
+        <span class="note">按日预算 ¥40</span>
+      </div>
+      <div class="day-detail js-day-detail"></div>
+
+      <section class="card bills-summary">
+        <div class="budget-row">
+          <span class="muted">本月已花</span>
+          <span class="val js-bill-month">¥0 <em>/ ¥0</em></span>
+        </div>
+        <div class="bar"><i class="js-bill-bar"></i></div>
+        <div class="summary-foot">
+          <span>剩余 <b class="js-bill-remain">¥0.00</b></span>
+          <span>日均 <b class="js-bill-daily">¥0.00</b></span>
+        </div>
+      </section>`;
+  }
+
+  function settingsHTML() {
+    return `
+      <header class="settings-head">
+        <button class="back-btn" data-go="today" aria-label="返回">‹</button>
+        <span class="settings-title">设置</span>
+      </header>
+
+      <div class="set-group">
+        <div class="set-row js-budget-row">
+          <span class="set-label">每月预算</span>
+          <span class="set-value"><b class="js-budget-value">¥1200</b><span class="chev">›</span></span>
+        </div>
+        <div class="set-row js-font-row">
+          <span class="set-label">字体大小</span>
+          <span class="set-value js-font-value">标准<span class="chev">›</span></span>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-row js-theme-row" data-mode="system">
+          <span class="set-label">跟随系统</span><span class="radio"></span>
+        </div>
+        <div class="set-row js-theme-row" data-mode="auto">
+          <span class="set-label">自动按时间</span><span class="radio on"></span>
+        </div>
+        <div class="set-row sub js-daytime-row">
+          <span class="set-label">日间时段</span>
+          <span class="set-value">07:00 — 19:00<span class="chev">›</span></span>
+        </div>
+        <div class="set-row js-theme-row" data-mode="light">
+          <span class="set-label">浅色</span><span class="radio"></span>
+        </div>
+        <div class="set-row js-theme-row" data-mode="dark">
+          <span class="set-label">深色</span><span class="radio"></span>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-row">
+          <span class="set-label">关于</span>
+          <span class="set-value">版本 1.0.0</span>
+        </div>
+      </div>
+
+      <p class="set-note">热力按每月预算的 1/30 作为每日基准：绿色低于一半，黄色接近日预算，橙色超出，红色严重超支。<br>自动模式下 07:00 切浅色，19:00 切深色。</p>`;
+  }
+
+  function cellHTML(theme, page) {
+    const pageName = { today: '今日', bills: '账单', settings: '设置' }[page];
+    const screen = page === 'today' ? todayHTML() : page === 'bills' ? billsHTML() : settingsHTML();
+    return `
+      <div class="cell">
+        <div class="cell-label">${pageName}</div>
+        <div class="phone" data-theme="${theme}" data-page="${page}">
+          ${statusbarHTML()}
+          <div class="screen">${screen}</div>
+          <div class="navbar"><i></i></div>
+        </div>
+      </div>`;
+  }
+
+  function setFontScale(v) {
+    app.fontScale = v;
+    document.documentElement.style.setProperty('--fs', v);
+    document.documentElement.classList.toggle('fs-lg', v >= 1.15);
+    document.querySelectorAll('.phone[data-page="settings"]').forEach(renderSettings);
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function itemHTML(item, isNew) {
+    return `
+      <div class="swipe-row${isNew ? ' new' : ''}" data-id="${item.id}">
+        <button class="swipe-action" aria-label="删除 ${esc(item.name)}">删除</button>
+        <div class="item swipe-item">
+          <span class="name">${esc(item.name)}</span>
+          <span class="amt">${money(item.amount)}</span>
+          <button class="del" aria-label="左滑删除提示">${svgX}</button>
+        </div>
+      </div>`;
+  }
+
+  function renderToday(ph, animate, newId) {
+    const day = todayDay();
+    const t = sum(day.items);
+    const mTotal = monthTotal(TODAY_KEY);
+    const monthDays = 30;
+    const dayNum = Math.max(1, parseDayNum(day.date));
+
+    // 日预算：月预算均摊到本月天数
+    const dayBudget = app.budget / monthDays;
+
+    // 本月
+    const monthRemain = app.budget - mTotal;
+    const monthDaysLeft = monthDays - dayNum + 1;
+    const daily = monthRemain / monthDaysLeft;
+    const monthAvg = mTotal / dayNum;
+
+    // 本周：从每月 1 号起每 7 天一段，月底不足 7 天也算一段
+    const blockStart = Math.floor((dayNum - 1) / 7) * 7 + 1;
+    const blockEnd = Math.min(blockStart + 6, monthDays);
+    const weekDaysCount = blockEnd - blockStart + 1;
+    const weekElapsed = dayNum - blockStart + 1;
+    const weekDaysLeft = blockEnd - dayNum + 1;
+    const weekBudget = dayBudget * weekDaysCount;
+    const weekSpent = sumDaysBetween(blockStart, blockEnd);
+    const weekRemain = weekBudget - weekSpent;
+    const weekDaily = weekRemain / weekDaysLeft;
+    const weekAvg = weekSpent / weekElapsed;
+
+    const todayEl = ph.querySelector('.js-today');
+    setMoney(todayEl, t, animate);
+    todayEl.classList.toggle('over-1', monthRemain >= 0 && t > daily && t <= daily * 2);
+    todayEl.classList.toggle('over-2', monthRemain < 0 || t > daily * 2);
+
+    const todayLeft = daily - t;
+    const leftEl = ph.querySelector('.js-today-left');
+    if (todayLeft < 0) {
+      leftEl.textContent = money(todayLeft);
+      leftEl.dataset.value = todayLeft;
+      leftEl.classList.add('negative');
+    } else {
+      leftEl.classList.remove('negative');
+      setMoney(leftEl, todayLeft, animate);
+    }
+
+    // 本月卡片
+    ph.querySelector('.js-month').textContent = money0(mTotal);
+    ph.querySelector('.js-budget').textContent = '/ ' + money0(app.budget);
+    const mLeftEl = ph.querySelector('.js-month-left');
+    mLeftEl.textContent = monthRemain < 0 ? '超支 ' + Math.round(-monthRemain) : '余 ' + Math.round(monthRemain);
+    mLeftEl.classList.toggle('over', monthRemain < 0);
+    const bar = ph.querySelector('.js-bar');
+    bar.style.width = Math.min(100, mTotal / app.budget * 100).toFixed(2) + '%';
+    bar.classList.toggle('over', monthRemain < 0);
+
+    // 本周卡片
+    ph.querySelector('.js-week-spent').textContent = money0(weekSpent);
+    ph.querySelector('.js-week-budget').textContent = '/ ' + money0(weekBudget);
+    const wLeftEl = ph.querySelector('.js-week-left');
+    wLeftEl.textContent = weekRemain < 0 ? '超支 ' + Math.round(-weekRemain) : '余 ' + Math.round(weekRemain);
+    wLeftEl.classList.toggle('over', weekRemain < 0);
+    const wBar = ph.querySelector('.js-week-bar');
+    wBar.style.width = Math.min(100, weekSpent / weekBudget * 100).toFixed(2) + '%';
+    wBar.classList.toggle('over', weekRemain < 0);
+
+    // 本月 / 本周两行明细
+    ph.querySelector('.js-month-days').textContent = monthDaysLeft;
+    const dailyEl = ph.querySelector('.js-daily');
+    setMoney(dailyEl, daily, animate);
+    dailyEl.classList.toggle('negative', monthRemain < 0);
+
+    setMoney(ph.querySelector('.js-month-avg'), monthAvg, animate);
+
+    ph.querySelector('.js-week-days').textContent = weekDaysLeft;
+    const wDailyEl = ph.querySelector('.js-week-daily');
+    setMoney(wDailyEl, weekDaily, animate);
+    wDailyEl.classList.toggle('negative', weekRemain < 0);
+
+    setMoney(ph.querySelector('.js-week-avg'), weekAvg, animate);
+    setMoney(ph.querySelector('.js-today-sum'), t, animate);
+
+    const box = ph.querySelector('.js-items');
+    box.innerHTML = '';
+    if (day.items.length === 0) {
+      box.innerHTML = '<div class="empty-today">今天还没有记录<div class="small">在下方输入「炒饭10 奶茶5」开始</div></div>';
+    } else {
+      [...day.items].reverse().forEach(item => {
+        box.insertAdjacentHTML('beforeend', itemHTML(item, item.id === newId));
+      });
+    }
+  }
+
+  function parseDayNum(dateStr) {
+    const m = dateStr.match(/(\d+)日/);
+    return m ? Number(m[1]) : 0;
+  }
+
+  function dayAmount(key, dayNum) {
+    const day = app.months[key].days.find(d => parseDayNum(d.date) === dayNum);
+    return day ? sum(day.items) : 0;
+  }
+
+  function fmtShort(v) {
+    if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return String(Math.round(v));
+  }
+
+  function defaultDay(key) {
+    const data = app.months[key];
+    return data.days.length ? parseDayNum(data.days[0].date) : 1;
+  }
+
+  function selectedDay(key) {
+    return app.selected[key] ?? defaultDay(key);
+  }
+
+  function renderCalendar(ph) {
+    const key = app.monthOrder[app.monthIndex];
+    const [y, m] = key.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const firstDow = new Date(y, m - 1, 1).getDay(); // 0 = Sunday
+    const offset = (firstDow + 6) % 7;               // Monday = 0
+    const sel = selectedDay(key);
+    const todayNum = key === TODAY_KEY ? 2 : null;
+    const dayBudget = app.budget / 30;
+
+    let html = `<div class="cal-week">${['一', '二', '三', '四', '五', '六', '日'].map(d => `<span>${d}</span>`).join('')}</div>`;
+    html += '<div class="cal-grid">';
+    for (let i = 0; i < offset; i++) html += '<span class="cal-cell empty"></span>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const amt = dayAmount(key, d);
+      const cls = ['cal-cell'];
+      if (d === sel) cls.push('sel');
+      if (d === todayNum) cls.push('today');
+      if (amt > 0) {
+        const p = amt / dayBudget;
+        cls.push('has');
+        cls.push(p <= 0.5 ? 'heat-1' : p <= 1 ? 'heat-2' : p <= 1.5 ? 'heat-3' : 'heat-4');
+      }
+      html += `<button class="${cls.join(' ')}" data-day="${d}">
+        <span class="cal-num">${d}</span>
+        <span class="cal-amt">${amt ? fmtShort(amt) : ''}</span>
+      </button>`;
+    }
+    html += '</div>';
+    ph.querySelector('.js-calendar').innerHTML = html;
+  }
+
+  function renderDayDetail(ph) {
+    const key = app.monthOrder[app.monthIndex];
+    const sel = selectedDay(key);
+    const day = app.months[key].days.find(d => parseDayNum(d.date) === sel);
+    const box = ph.querySelector('.js-day-detail');
+    const [y, m] = key.split('-').map(Number);
+    const selDate = new Date(y, m - 1, sel);
+    const todayDate = new Date(2026, 10, 2);
+    const canAdd = selDate <= todayDate;
+    const addBtn = canAdd
+      ? '<button class="add-entry-btn js-add-entry">＋ 补记一笔</button>'
+      : '';
+
+    if (!day || day.items.length === 0) {
+      const label = `${m}月${sel}日`;
+      box.innerHTML = `
+        <div class="day-detail-head"><span>${label}</span><b>¥0.00</b></div>
+        <div class="empty-day">这天没有记录</div>
+        ${addBtn}`;
+      return;
+    }
+
+    const total = sum(day.items);
+    box.innerHTML = `
+      <div class="day-detail-head"><span>${day.date} ${day.weekday}</span><b>${money(total)}</b></div>
+      <div class="day-items">${day.items.map(item => itemHTML(item)).join('')}</div>
+      ${addBtn}`;
+  }
+
+  function renderBills(ph) {
+    const key = app.monthOrder[app.monthIndex];
+    const data = app.months[key];
+    const total = sum(data.days.flatMap(d => d.items));
+    const remain = app.budget - total;
+
+    ph.querySelector('.js-month-title').textContent = data.label;
+    ph.querySelector('.js-bill-month').innerHTML = '¥' + total + ' <em>/ ¥' + app.budget + '</em>';
+    ph.querySelector('.js-bill-bar').style.width = Math.min(100, total / app.budget * 100).toFixed(2) + '%';
+    ph.querySelector('.js-bill-remain').textContent = money(remain);
+    ph.querySelector('.js-bill-daily').textContent = money(total / 30);
+
+    const legend = ph.querySelector('.js-legend');
+    legend.querySelector('.note').textContent = '按日预算 ¥' + Math.round(app.budget / 30);
+
+    renderCalendar(ph);
+    renderDayDetail(ph);
+  }
+
+  function renderSettings(ph) {
+    ph.querySelector('.js-budget-value').textContent = '¥' + app.budget;
+    const fontName = app.fontScale <= 0.95 ? '小' : app.fontScale <= 1.05 ? '标准' : app.fontScale <= 1.2 ? '大' : '特大';
+    ph.querySelector('.js-font-value').innerHTML = fontName + '<span class="chev">›</span>';
+    ph.querySelectorAll('.js-theme-row').forEach(r => {
+      r.querySelector('.radio').classList.toggle('on', r.dataset.mode === app.themeMode);
+    });
+    const dayRow = ph.querySelector('.js-daytime-row');
+    if (dayRow) dayRow.style.display = app.themeMode === 'auto' ? 'flex' : 'none';
+  }
+
+  function renderAll(animate, newId) {
+    document.querySelectorAll('.phone').forEach(ph => {
+      const page = ph.dataset.page;
+      if (page === 'today') renderToday(ph, animate, newId);
+      else if (page === 'bills') renderBills(ph);
+      else renderSettings(ph);
+    });
+  }
+
+  function openAddSheet(phone) {
+    if (phone.querySelector('.modal-mask')) return;
+    const key = app.monthOrder[app.monthIndex];
+    const sel = selectedDay(key);
+    const [y, m] = key.split('-').map(Number);
+    const wd = '周' + ['日', '一', '二', '三', '四', '五', '六'][new Date(y, m - 1, sel).getDay()];
+
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `
+      <div class="sheet">
+        <h3>${m}月${sel}日 ${wd} 补记</h3>
+        <input class="js-add-input" type="text" placeholder="炒饭10 奶茶5" autocomplete="off" spellcheck="false">
+        <div class="add-preview js-add-preview"></div>
+        <div class="sheet-actions">
+          <button class="btn-ghost js-add-cancel">取消</button>
+          <button class="btn-primary js-add-save" disabled>记上</button>
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+
+    const input = mask.querySelector('.js-add-input');
+    const preview = mask.querySelector('.js-add-preview');
+    const save = mask.querySelector('.js-add-save');
+    input.focus();
+
+    input.addEventListener('input', () => {
+      const text = input.value.trim();
+      const items = text ? parseInput(text) : [];
+      const okAll = items.length > 0 && items.every(i => i.ok);
+      preview.innerHTML = items.map(i =>
+        `<span class="parse-chip${i.ok ? '' : ' bad'}">${i.ok ? i.name + ' ' + money(i.amount) : i.name + ' 无法识别'}</span>`
+      ).join('');
+      save.disabled = !okAll;
+    });
+
+    mask.addEventListener('click', ev => {
+      if (ev.target === mask || ev.target.closest('.js-add-cancel')) {
+        mask.remove();
+        return;
+      }
+      if (ev.target.closest('.js-add-save')) {
+        const items = parseInput(input.value.trim());
+        if (!items.length || items.some(i => !i.ok)) return;
+        const data = app.months[key];
+        let day = data.days.find(d => parseDayNum(d.date) === sel);
+        if (!day) {
+          day = { date: `${m}月${sel}日`, weekday: wd, items: [] };
+          data.days.push(day);
+          data.days.sort((a, b) => parseDayNum(b.date) - parseDayNum(a.date));
+        }
+        items.forEach(i => day.items.push({ id: ++uid, name: i.name, amount: i.amount }));
+        mask.remove();
+        document.querySelectorAll('.phone[data-page="bills"]').forEach(renderBills);
+      }
+    });
+  }
+
+  /* ---------------- 构建 ---------------- */
+  function build() {
+    const lightRow = document.getElementById('lightRow');
+    const darkRow = document.getElementById('darkRow');
+    ['today', 'bills', 'settings'].forEach(page => {
+      lightRow.insertAdjacentHTML('beforeend', cellHTML('light', page));
+      darkRow.insertAdjacentHTML('beforeend', cellHTML('dark', page));
+    });
+  }
+
+  /* ---------------- 演示 ---------------- */
+  async function demo(over = false) {
+    if (busy) return;
+    busy = true;
+    const btn = document.getElementById(over ? 'overBtn' : 'demoBtn');
+    btn.disabled = true;
+
+    const name = over ? '购物' : '烤肠';
+    const amount = over ? 50 : 3;
+    const phones = [...document.querySelectorAll('.phone[data-page="today"]')];
+
+    phones.forEach(ph => {
+      const input = ph.querySelector('.js-input');
+      input.value = name + amount;
+      input.classList.add('focus-demo');
+      renderParse(ph);
+    });
+
+    await wait(680);
+
+    phones.forEach(ph => {
+      const input = ph.querySelector('.js-input');
+      input.value = '';
+      input.classList.remove('focus-demo');
+      const box = ph.querySelector('.js-parse');
+      box.classList.remove('on');
+      box.innerHTML = '';
+      ph.querySelector('.js-submit').disabled = false;
+    });
+
+    await wait(160);
+    const item = { id: ++uid, name, amount };
+    todayDay().items.push(item);
+    renderAll(true, item.id);
+
+    await wait(620);
+    btn.disabled = false;
+    busy = false;
+  }
+
+  function renderParse(ph) {
+    const input = ph.querySelector('.js-input');
+    const box = ph.querySelector('.js-parse');
+    const submit = ph.querySelector('.js-submit');
+    const text = input.value.trim();
+
+    if (!text) {
+      box.classList.remove('on');
+      box.innerHTML = '';
+      submit.disabled = false;
+      return;
+    }
+
+    const items = parseInput(text);
+    const okAll = items.length > 0 && items.every(i => i.ok);
+    box.classList.add('on');
+
+    let html = items.map(i =>
+      i.ok
+        ? `<span class="parse-chip">${esc(i.name)} ${money(i.amount)}</span>`
+        : `<span class="parse-chip bad">${esc(i.name)} 无法识别</span>`
+    ).join('');
+
+    if (okAll) {
+      const add = items.reduce((s, i) => s + i.amount, 0);
+      const mTotal = monthTotal(TODAY_KEY);
+      const remain = app.budget - mTotal;
+      const daily = remain / 29;
+      const after = daily - todayTotal() - add;
+      html += after >= 0
+        ? `<span class="parse-hint">记上后今日还剩 ${money(after)}</span>`
+        : `<span class="parse-hint bad">记上后今日超支 ${money(-after)}</span>`;
+    }
+
+    box.innerHTML = html;
+    submit.disabled = !okAll;
+  }
+
+  /* ---------------- 事件 ---------------- */
+  document.addEventListener('click', e => {
+    // × 只做提示
+    const del = e.target.closest('.del');
+    if (del) {
+      showToast(del.closest('.phone'), '左滑条目可删除');
+      return;
+    }
+
+    // 左滑露出的删除按钮
+    const swipeDel = e.target.closest('.swipe-action');
+    if (swipeDel) {
+      const row = swipeDel.closest('.swipe-row');
+      const id = Number(row.dataset.id);
+      document.querySelectorAll(`.swipe-row[data-id="${id}"]`).forEach(el => {
+        el.classList.add('removing');
+        el.style.height = '0';
+        el.style.opacity = '0';
+      });
+      setTimeout(() => {
+        Object.values(app.months).forEach(m => m.days.forEach(d => {
+          d.items = d.items.filter(i => i.id !== id);
+        }));
+        renderAll(true);
+      }, 220);
+      return;
+    }
+
+    // 提交输入
+    const submit = e.target.closest('.js-submit');
+    if (submit) {
+      const ph = submit.closest('.phone');
+      const input = ph.querySelector('.js-input');
+      const text = input.value.trim();
+      const items = parseInput(text);
+      if (!text || !items.length || items.some(i => !i.ok)) {
+        showToast(ph, '有无法识别的条目');
+        return;
+      }
+      const added = items.map(i => ({ id: ++uid, name: i.name, amount: i.amount }));
+      added.forEach(i => todayDay().items.push(i));
+      input.value = '';
+      const box = ph.querySelector('.js-parse');
+      box.classList.remove('on');
+      box.innerHTML = '';
+      submit.disabled = false;
+      renderAll(true, added[added.length - 1].id);
+      return;
+    }
+
+    // 字体大小
+    if (e.target.closest('.js-font-row')) {
+      const next = [1.0, 1.15, 1.3, 0.9];
+      const i = next.findIndex(v => Math.abs(v - app.fontScale) < 0.01);
+      setFontScale(next[(i + 1) % next.length]);
+      return;
+    }
+
+    // 补记
+    if (e.target.closest('.js-add-entry')) {
+      openAddSheet(e.target.closest('.phone'));
+      return;
+    }
+
+    // 日历选日
+    const calCell = e.target.closest('.cal-cell[data-day]');
+    if (calCell) {
+      const key = app.monthOrder[app.monthIndex];
+      app.selected[key] = Number(calCell.dataset.day);
+      document.querySelectorAll('.phone[data-page="bills"]').forEach(renderBills);
+      return;
+    }
+
+    // 账单翻月
+    const prev = e.target.closest('.js-prev');
+    const next = e.target.closest('.js-next');
+    if (prev || next) {
+      const delta = prev ? -1 : 1;
+      app.monthIndex = Math.max(0, Math.min(app.monthOrder.length - 1, app.monthIndex + delta));
+      document.querySelectorAll('.phone[data-page="bills"]').forEach(renderBills);
+      return;
+    }
+
+    // 主题单选项
+    const themeRow = e.target.closest('.js-theme-row');
+    if (themeRow) {
+      app.themeMode = themeRow.dataset.mode;
+      document.querySelectorAll('.phone[data-page="settings"]').forEach(renderSettings);
+      return;
+    }
+
+    // 预算编辑
+    const budgetRow = e.target.closest('.js-budget-row');
+    if (budgetRow) {
+      openBudgetSheet(budgetRow.closest('.phone'));
+      return;
+    }
+  });
+
+  document.addEventListener('input', e => {
+    if (!e.target.classList.contains('js-input')) return;
+    renderParse(e.target.closest('.phone'));
+  });
+
+  /* 左滑删除 */
+  let drag = null;
+  document.addEventListener('pointerdown', e => {
+    document.querySelectorAll('.swipe-row.open').forEach(row => {
+      if (!row.contains(e.target)) {
+        row.classList.remove('open');
+        row.querySelector('.swipe-item').style.transform = '';
+      }
+    });
+    if (e.target.closest('.del') || e.target.closest('.swipe-action')) return;
+    const item = e.target.closest('.swipe-item');
+    if (!item) return;
+    const row = item.closest('.swipe-row');
+    row.classList.add('open');
+    drag = { item, row, startX: e.clientX, dx: 0 };
+    item.classList.add('dragging');
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = Math.min(0, e.clientX - drag.startX);
+    drag.dx = Math.max(-72, dx);
+    drag.item.style.transform = `translateX(${drag.dx}px)`;
+  });
+  document.addEventListener('pointerup', () => {
+    if (!drag) return;
+    const { item, row, dx } = drag;
+    item.classList.remove('dragging');
+    if (dx < -36) {
+      item.style.transform = 'translateX(-64px)';
+    } else {
+      item.style.transform = '';
+      row.classList.remove('open');
+    }
+    drag = null;
+  });
+  document.addEventListener('pointercancel', () => {
+    if (!drag) return;
+    drag.item.classList.remove('dragging');
+    drag.item.style.transform = '';
+    drag.row.classList.remove('open');
+    drag = null;
+  });
+
+  function showToast(phone, msg) {
+    let t = phone.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      phone.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('on'), 1600);
+  }
+
+  function openBudgetSheet(phone) {
+    if (phone.querySelector('.modal-mask')) return;
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `
+      <div class="sheet">
+        <h3>每月预算</h3>
+        <input type="number" value="${app.budget}" inputmode="numeric">
+        <div class="sheet-actions">
+          <button class="btn-ghost js-cancel">取消</button>
+          <button class="btn-primary js-save">保存</button>
+        </div>
+      </div>`;
+    phone.appendChild(mask);
+    const input = mask.querySelector('input');
+    input.focus();
+    input.select();
+
+    mask.addEventListener('click', ev => {
+      if (ev.target === mask || ev.target.closest('.js-cancel')) {
+        mask.remove();
+      }
+      if (ev.target.closest('.js-save')) {
+        const v = Math.max(1, Math.round(Number(input.value) || app.budget));
+        app.budget = v;
+        mask.remove();
+        renderAll(false);
+      }
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+  build();
+  renderAll(false);
+  document.getElementById('demoBtn').addEventListener('click', () => demo(false));
+  document.getElementById('overBtn').addEventListener('click', () => demo(true));
+</script>
+</body>
+</html>
